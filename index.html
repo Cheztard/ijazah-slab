@@ -114,7 +114,7 @@
     display: grid; place-items: center;
     padding: 8px 0 30px;
     perspective: 900px;
-    touch-action: none;           /* drag to tilt, not scroll */
+    touch-action: pan-y;          /* vertical swipes scroll, sideways drags spin */
     user-select: none; -webkit-user-select: none;
     -webkit-touch-callout: none;
     cursor: grab;
@@ -133,7 +133,7 @@
   }
 
   .slab {
-    --w: min(74vw, 320px);
+    --w: min(66vw, 320px);
     --h: calc(var(--w) * 5.4 / 3.3);
     --t: 12px;                       /* acrylic thickness */
     position: relative;
@@ -487,7 +487,7 @@
         <div class="edge l"></div><div class="edge r"></div><div class="edge t"></div><div class="edge b"></div>
       </div>
     </section>
-    <p class="hint" id="hint">Drag to spin · Double-tap to flip</p>
+    <p class="hint" id="hint">Swipe sideways to spin · Double-tap to flip</p>
     <div class="actions">
       <button class="btn-cam" id="openCam" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
