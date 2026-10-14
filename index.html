@@ -40,7 +40,7 @@
 
   /* ---------- Room: wall of safe-deposit drawers ---------- */
   .room {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
     background:
       radial-gradient(ellipse 60% 45% at 50% 38%, rgba(127, 211, 255, .10), transparent 70%),
       radial-gradient(ellipse 120% 80% at 50% 120%, #000 30%, transparent 70%),
@@ -121,8 +121,7 @@
   }
   .stage.dragging { cursor: grabbing; }
   .stage::before { /* spotlight cone */
-    content: ""; position: absolute; top: -60px; left: 50%; width: 140%; height: 120%;
-    transform: translateX(-50%);
+    content: ""; position: absolute; top: -60px; left: 0; right: 0; height: 120%;
     background: radial-gradient(ellipse 40% 55% at 50% 30%, rgba(190, 230, 255, .14), transparent 70%);
     pointer-events: none;
   }
@@ -135,29 +134,19 @@
 
   .slab {
     --w: min(74vw, 320px);
+    --h: calc(var(--w) * 5.4 / 3.3);
+    --t: 12px;                       /* acrylic thickness */
     position: relative;
     width: var(--w);
-    aspect-ratio: 3.3 / 5.4;
+    height: var(--h);
     transform-style: preserve-3d;
     transform: rotateX(var(--rx)) rotateY(var(--ry));
     will-change: transform;
   }
-  .slab.idle { animation: sway 6s ease-in-out infinite; }
-  @keyframes sway {
-    0%, 100% { transform: rotateX(2deg) rotateY(-6deg); }
-    50% { transform: rotateX(-2deg) rotateY(6deg); }
-  }
 
-  /* back plate gives a hint of acrylic thickness when tilted */
-  .slab-back {
-    position: absolute; inset: 0; border-radius: 14px;
-    transform: translateZ(-10px);
-    background: linear-gradient(135deg, rgba(200,220,240,.18), rgba(80,100,120,.10));
-    border: 1px solid rgba(220, 235, 250, .18);
-    box-shadow: 0 30px 60px rgba(0,0,0,.6), 0 10px 20px rgba(0,0,0,.5);
-  }
-  .slab-front {
+  .face {
     position: absolute; inset: 0; border-radius: 14px; overflow: hidden;
+    -webkit-backface-visibility: hidden; backface-visibility: hidden;
     background:
       linear-gradient(160deg, rgba(255,255,255,.22), rgba(255,255,255,.05) 35%, rgba(255,255,255,.03) 65%, rgba(255,255,255,.14)),
       rgba(170, 190, 210, .10);
@@ -170,6 +159,22 @@
     padding: 5.5% 6%;
     display: flex; flex-direction: column; gap: 4.5%;
   }
+  .face.front { transform: translateZ(calc(var(--t) / 2)); }
+  .face.back  { transform: rotateY(180deg) translateZ(calc(var(--t) / 2)); }
+
+  /* acrylic side walls so the slab has real thickness when spun */
+  .edge {
+    position: absolute;
+    background: linear-gradient(90deg, rgba(200,220,240,.30), rgba(255,255,255,.65) 50%, rgba(200,220,240,.30));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
+  }
+  .edge.l, .edge.r { top: 12px; bottom: 12px; left: calc(50% - var(--t) / 2); width: var(--t); }
+  .edge.t, .edge.b { left: 12px; right: 12px; top: calc(50% - var(--t) / 2); height: var(--t);
+    background: linear-gradient(180deg, rgba(200,220,240,.30), rgba(255,255,255,.65) 50%, rgba(200,220,240,.30)); }
+  .edge.l { transform: rotateY(-90deg) translateZ(calc(var(--w) / 2)); }
+  .edge.r { transform: rotateY(90deg)  translateZ(calc(var(--w) / 2)); }
+  .edge.t { transform: rotateX(90deg)  translateZ(calc(var(--h) / 2)); }
+  .edge.b { transform: rotateX(-90deg) translateZ(calc(var(--h) / 2)); }
 
   /* label */
   .label {
@@ -196,6 +201,23 @@
     width: 62%;
   }
   .cert { align-self: end; text-align: right; font-size: .98em; }
+
+  /* back label: hologram + record + code */
+  .label.rear {
+    grid-template-columns: auto 1fr auto; align-items: center; gap: 0 9px;
+    font-family: var(--mono); font-size: calc(var(--w) * .03); line-height: 1.45;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .holo-seal {
+    width: calc(var(--w) * .15); aspect-ratio: 1; border-radius: 50%;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 38%, rgba(255,255,255,.7) 39% 41%, transparent 42%),
+      conic-gradient(from calc(var(--ry) * 2), #ff8ad8, #8ae0ff, #a8ffb0, #fff59a, #ff8ad8);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+    display: grid; place-items: center;
+    font: 700 calc(var(--w) * .045) var(--mono); color: rgba(30,30,40,.55);
+  }
+  .qr { width: calc(var(--w) * .15); aspect-ratio: 1; image-rendering: pixelated; }
 
   /* inner well + card */
   .well {
@@ -236,11 +258,26 @@
     filter: sepia(.08) contrast(1.02);
     pointer-events: none;
   }
+  /* reverse of the paper: front printing faintly showing through */
+  .card.rev {
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.35), transparent 60%),
+      linear-gradient(135deg, #ece5d2, #ddd3ba);
+  }
+  .card.rev img {
+    transform: translate(-50%, -50%) scaleX(-1) rotate(90deg);
+    opacity: .13; filter: grayscale(1) blur(.4px);
+    mix-blend-mode: multiply;
+  }
+  .card.rev .serial {
+    position: absolute; right: 8%; bottom: 5%;
+    font: 500 calc(var(--w) * .028) var(--mono); color: rgba(60,50,30,.5);
+    writing-mode: vertical-rl; letter-spacing: .1em;
+  }
 
   /* glare + holo, driven by --mx/--my/--glare */
-  .glare, .holo {
+  .glare, .holo, .edge-shine {
     position: absolute; inset: 0; border-radius: 14px; pointer-events: none;
-    transform: translateZ(1px);
   }
   .glare {
     background: radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,.42), rgba(255,255,255,.10) 25%, transparent 50%);
@@ -261,8 +298,6 @@
     opacity: calc(var(--glare) * .9);
   }
   .edge-shine {
-    position: absolute; inset: 0; border-radius: 14px; pointer-events: none;
-    transform: translateZ(2px);
     background: linear-gradient(calc(110deg + var(--ry) * 2), transparent 40%, rgba(255,255,255,.35) 50%, transparent 60%);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
@@ -270,6 +305,73 @@
     padding: 3px;
     opacity: calc(.25 + var(--glare) * .75);
   }
+
+  .actions { display: flex; justify-content: center; margin-top: -4px; }
+  .btn-cam {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 18px; border-radius: 999px;
+    border: 1px solid rgba(127,211,255,.45);
+    background: linear-gradient(180deg, rgba(127,211,255,.16), rgba(127,211,255,.05));
+    color: var(--text); font: 600 13px var(--sans); letter-spacing: .01em;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .btn-cam svg { width: 17px; height: 17px; color: var(--accent); }
+  .btn-cam:active { transform: scale(.97); }
+
+  /* ---------- Camera mode ---------- */
+  .cam {
+    position: fixed; inset: 0; z-index: 50; background: #000;
+    display: none; touch-action: none;
+  }
+  .cam.on { display: block; }
+  .cam canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .cam video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .cam-bar {
+    position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; pointer-events: none;
+  }
+  .cam-bar > * { pointer-events: auto; }
+  .cam-bar.top { top: calc(env(safe-area-inset-top) + 14px); }
+  .cam-bar.bottom { bottom: calc(env(safe-area-inset-bottom) + 26px); justify-content: center; }
+  .icon-btn {
+    width: 42px; height: 42px; border-radius: 50%; border: 0;
+    background: rgba(0,0,0,.45); color: #fff; display: grid; place-items: center; cursor: pointer;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .icon-btn svg { width: 20px; height: 20px; }
+  .cam-tip {
+    font: 500 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: #fff;
+    background: rgba(0,0,0,.45); padding: 7px 11px; border-radius: 999px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .shutter {
+    width: 74px; height: 74px; border-radius: 50%; border: 4px solid #fff;
+    background: rgba(255,255,255,.25); cursor: pointer; padding: 0;
+  }
+  .shutter::after { content: ""; display: block; margin: 5px; height: calc(100% - 10px); border-radius: 50%; background: #fff; }
+  .shutter:active::after { transform: scale(.9); }
+  .flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .35s; }
+  .flash.go { opacity: .85; transition: none; }
+  .cam-msg {
+    position: absolute; left: 16px; right: 16px; top: calc(env(safe-area-inset-top) + 70px);
+    display: none; text-align: center; padding: 12px 14px; border-radius: 12px;
+    background: rgba(0,0,0,.6); color: var(--text); font: 13px/1.5 var(--sans);
+  }
+  .cam-msg.on { display: block; }
+
+  .shot {
+    position: absolute; inset: 0; z-index: 2; background: rgba(5,7,9,.94);
+    display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    padding: calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 24px);
+  }
+  .shot.on { display: flex; }
+  .shot img { max-width: 100%; max-height: 72svh; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.6); }
+  .shot-actions { display: flex; gap: 10px; }
+  .pill {
+    padding: 12px 20px; border-radius: 999px; font: 600 14px var(--sans); cursor: pointer;
+    border: 1px solid rgba(255,255,255,.25); background: transparent; color: #fff;
+  }
+  .pill.primary { background: var(--accent); color: #06121b; border-color: var(--accent); }
 
   .hint {
     font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
@@ -333,7 +435,6 @@
     .title h1 { font-size: 26px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .slab.idle { animation: none; }
     .live i { animation: none; }
   }
 </style>
@@ -353,11 +454,10 @@
       <h1>Ijazah "Asli" <span>· 1985</span></h1>
     </div>
 
-    <section class="stage" id="stage" aria-label="Graded slab. Drag to tilt.">
+    <section class="stage" id="stage" aria-label="Graded slab. Drag to spin, double-tap to flip.">
       <div class="pedestal"></div>
-      <div class="slab idle" id="slab">
-        <div class="slab-back"></div>
-        <div class="slab-front">
+      <div class="slab" id="slab">
+        <div class="face front">
           <div class="label">
             <div class="l">1985 Ijazah Asli<br>Joko Widodo<br>1st Edition</div>
             <div class="r">#1<br><span class="grade">UGM</span></div>
@@ -367,13 +467,33 @@
           <div class="well">
             <div class="card"><img src="assets/ijazah.jpg" alt="1985 Universitas Gadjah Mada forestry diploma, sealed in the slab" draggable="false"></div>
           </div>
+          <div class="holo"></div>
+          <div class="glare"></div>
+          <div class="edge-shine"></div>
         </div>
-        <div class="holo"></div>
-        <div class="glare"></div>
-        <div class="edge-shine"></div>
+        <div class="face back" aria-hidden="true">
+          <div class="label rear">
+            <div class="holo-seal">V</div>
+            <div>Vault 01<br>Cert 1120-051185<br>Sealed 05.11.1985</div>
+            <svg class="qr" id="qr" aria-hidden="true"></svg>
+          </div>
+          <div class="well">
+            <div class="card rev"><img src="assets/ijazah.jpg" alt="" draggable="false"><span class="serial">No. 1120 · 15456</span></div>
+          </div>
+          <div class="holo"></div>
+          <div class="glare"></div>
+          <div class="edge-shine"></div>
+        </div>
+        <div class="edge l"></div><div class="edge r"></div><div class="edge t"></div><div class="edge b"></div>
       </div>
     </section>
-    <p class="hint" id="hint">Touch &amp; drag to tilt</p>
+    <p class="hint" id="hint">Drag to spin · Double-tap to flip</p>
+    <div class="actions">
+      <button class="btn-cam" id="openCam" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+        Take a photo with it
+      </button>
+    </div>
 
     <section class="panel" aria-label="Record">
       <div class="panel-head"><span>Record</span><b>#001</b></div>
@@ -401,99 +521,393 @@
     <footer>Vault 01 · Encrypted shelf · Climate 18°C / 45% RH</footer>
   </main>
 
+  <div class="cam" id="cam" role="dialog" aria-label="Camera">
+    <video id="camVideo" playsinline muted autoplay></video>
+    <canvas id="camCanvas"></canvas>
+    <div class="flash" id="flash"></div>
+    <div class="cam-msg" id="camMsg"></div>
+    <div class="cam-bar top">
+      <button class="icon-btn" id="closeCam" type="button" aria-label="Close camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <span class="cam-tip" id="camTip">Drag · Pinch to size</span>
+      <button class="icon-btn" id="flipCam" type="button" aria-label="Switch camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/></svg>
+      </button>
+    </div>
+    <div class="cam-bar bottom">
+      <button class="shutter" id="shutter" type="button" aria-label="Take photo"></button>
+    </div>
+    <div class="shot" id="shot">
+      <img id="shotImg" alt="Your photo with the slab">
+      <div class="shot-actions">
+        <button class="pill" id="retake" type="button">Retake</button>
+        <button class="pill primary" id="saveShot" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
 <script>
-  // Barcode: deterministic bars seeded from the cert number
-  (function () {
-    const svg = document.getElementById('barcode');
-    let seed = 1120051185, x = 0, out = '';
+  const CERT = '1120-051185';
+
+  // Deterministic barcode bars seeded from the cert number
+  function barcodeBars(width) {
+    let seed = 1120051185, x = 0;
     const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
-    while (x < 200) {
+    const bars = [];
+    while (x < width) {
       const w = 1 + Math.floor(rnd() * 3), gap = 1 + Math.floor(rnd() * 2.2);
-      out += `<rect x="${x}" y="0" width="${w}" height="10" fill="#111"/>`;
+      bars.push([x, w]);
       x += w + gap;
     }
-    svg.setAttribute('viewBox', `0 0 ${x} 10`);
-    svg.innerHTML = out;
+    return { bars, width: x };
+  }
+
+  (function () {
+    const svg = document.getElementById('barcode');
+    const { bars, width } = barcodeBars(200);
+    svg.setAttribute('viewBox', `0 0 ${width} 10`);
+    svg.innerHTML = bars.map(([x, w]) => `<rect x="${x}" y="0" width="${w}" height="10" fill="#111"/>`).join('');
+
+    // Fake QR on the back label: finder squares + seeded modules
+    const qr = document.getElementById('qr'), N = 21;
+    let seed = 51185, out = '';
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const finder = (x, y) => `<rect x="${x}" y="${y}" width="7" height="7" fill="#111"/><rect x="${x + 1}" y="${y + 1}" width="5" height="5" fill="#fff"/><rect x="${x + 2}" y="${y + 2}" width="3" height="3" fill="#111"/>`;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const inFinder = (x < 8 && y < 8) || (x > N - 9 && y < 8) || (x < 8 && y > N - 9);
+      if (!inFinder && rnd() > .52) out += `<rect x="${x}" y="${y}" width="1" height="1" fill="#111"/>`;
+    }
+    qr.setAttribute('viewBox', `0 0 ${N} ${N}`);
+    qr.setAttribute('shape-rendering', 'crispEdges');
+    qr.innerHTML = `<rect width="${N}" height="${N}" fill="#fff"/>` + out + finder(0, 0) + finder(N - 7, 0) + finder(0, N - 7);
   })();
 
-  // Touch / pointer tilt with spring-back
+  // ---------- 360 spin: drag rotates freely, flick keeps momentum, settles on a face ----------
   (function () {
     const stage = document.getElementById('stage');
-    const slab = document.getElementById('slab');
     const hint = document.getElementById('hint');
     const root = document.documentElement;
-    const MAX = 22;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const cur = { rx: 0, ry: 0, mx: 50, my: 50, g: 0 };
-    let tgt = { rx: 0, ry: 0, mx: 50, my: 50, g: 0 };
-    let active = false, raf = 0, idleTimer = 0;
+    let rx = 0, ry = 0, vel = 0;
+    let dragging = false, lastX = 0, lastY = 0, lastMoveT = 0;
+    let snapTo = null, lastInteract = performance.now();
+    let downX = 0, downY = 0, downT = 0, lastTapT = 0;
 
-    function aim(clientX, clientY) {
-      const r = slab.getBoundingClientRect();
-      const px = Math.min(Math.max((clientX - r.left) / r.width, -0.2), 1.2);
-      const py = Math.min(Math.max((clientY - r.top) / r.height, -0.2), 1.2);
-      tgt = {
-        ry: (px - 0.5) * 2 * MAX,
-        rx: -(py - 0.5) * 2 * MAX,
-        mx: px * 100, my: py * 100, g: 1
-      };
-    }
-
-    function loop() {
-      const k = active ? 0.22 : 0.08;
-      let moving = false;
-      for (const key in cur) {
-        cur[key] += (tgt[key] - cur[key]) * k;
-        if (Math.abs(tgt[key] - cur[key]) > 0.02) moving = true;
-      }
-      root.style.setProperty('--rx', cur.rx.toFixed(2) + 'deg');
-      root.style.setProperty('--ry', cur.ry.toFixed(2) + 'deg');
-      root.style.setProperty('--mx', cur.mx.toFixed(1) + '%');
-      root.style.setProperty('--my', cur.my.toFixed(1) + '%');
-      root.style.setProperty('--glare', cur.g.toFixed(3));
-      raf = (moving || active) ? requestAnimationFrame(loop) : 0;
-      if (!raf && !active) scheduleIdle();
-    }
-    const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
-
-    function wake() {
-      clearTimeout(idleTimer);
-      if (slab.classList.contains('idle')) {
-        slab.classList.remove('idle');
-      }
-    }
-    function scheduleIdle() {
-      clearTimeout(idleTimer);
-      if (reduce) return;
-      idleTimer = setTimeout(() => slab.classList.add('idle'), 2500);
-    }
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
     stage.addEventListener('pointerdown', e => {
-      active = true; wake();
+      dragging = true; snapTo = null; vel = 0;
+      lastX = downX = e.clientX; lastY = downY = e.clientY; downT = lastMoveT = performance.now();
       stage.classList.add('dragging');
-      stage.setPointerCapture(e.pointerId);
+      try { stage.setPointerCapture(e.pointerId); } catch (_) {}
       hint.classList.add('gone');
-      aim(e.clientX, e.clientY); kick();
+      lastInteract = performance.now();
     });
     stage.addEventListener('pointermove', e => {
-      if (active || e.pointerType === 'mouse') {
-        if (!active && e.pointerType === 'mouse') { wake(); }
-        aim(e.clientX, e.clientY); kick();
+      if (!dragging) return;
+      const now = performance.now();
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      ry += dx * 0.55;
+      rx = clamp(rx - dy * 0.35, -40, 40);
+      const dt = Math.max(now - lastMoveT, 1);
+      vel = vel * 0.6 + (dx * 0.55 * (16 / dt)) * 0.4;
+      lastX = e.clientX; lastY = e.clientY; lastMoveT = now;
+      lastInteract = now;
+    });
+    const end = e => {
+      if (!dragging) return;
+      dragging = false;
+      stage.classList.remove('dragging');
+      const now = performance.now();
+      if (now - lastMoveT > 80) vel = 0;              // held still before letting go
+      const isTap = Math.hypot(e.clientX - downX, e.clientY - downY) < 8 && now - downT < 250;
+      if (isTap) {
+        if (now - lastTapT < 320) { snapTo = Math.round(ry / 180) * 180 + 180; vel = 0; lastTapT = 0; }
+        else lastTapT = now;
+      }
+      lastInteract = now;
+    };
+    stage.addEventListener('pointerup', end);
+    stage.addEventListener('pointercancel', end);
+
+    function frame(t) {
+      if (!dragging) {
+        if (snapTo !== null) {
+          ry += (snapTo - ry) * 0.12;
+          if (Math.abs(snapTo - ry) < 0.05) { ry = snapTo; snapTo = null; }
+        } else if (Math.abs(vel) > 0.25) {
+          ry += vel; vel *= 0.95;
+        } else {
+          vel = 0;
+          ry += (Math.round(ry / 180) * 180 - ry) * 0.06;  // settle on front or back
+        }
+        rx += (0 - rx) * 0.08;
+      }
+
+      // gentle idle sway after a few seconds untouched
+      let sx = 0, sy = 0;
+      if (!reduce && !dragging) {
+        const k = clamp((t - lastInteract - 2500) / 1500, 0, 1);
+        sy = Math.sin(t / 1100) * 7 * k;
+        sx = Math.sin(t / 1700) * 3 * k;
+      }
+      const RY = ry + sy, RX = rx + sx;
+      const rad = RY * Math.PI / 180;
+      const glare = clamp(Math.abs(Math.sin(rad)) * 1.8 + Math.abs(RX) / 30 + Math.abs(vel) / 12, 0, 1);
+
+      root.style.setProperty('--ry', RY.toFixed(2) + 'deg');
+      root.style.setProperty('--rx', RX.toFixed(2) + 'deg');
+      root.style.setProperty('--mx', (50 - Math.sin(rad) * 80).toFixed(1) + '%');
+      root.style.setProperty('--my', (50 + RX * 1.6).toFixed(1) + '%');
+      root.style.setProperty('--glare', glare.toFixed(3));
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+
+  // ---------- Camera: place the slab in your shot, then capture ----------
+  (function () {
+    const cam = document.getElementById('cam');
+    const video = document.getElementById('camVideo');
+    const canvas = document.getElementById('camCanvas');
+    const ctx = canvas.getContext('2d');
+    const msg = document.getElementById('camMsg');
+    const tip = document.getElementById('camTip');
+    const shot = document.getElementById('shot');
+    const shotImg = document.getElementById('shotImg');
+    const flash = document.getElementById('flash');
+
+    let stream = null, facing = 'environment', raf = 0, blob = null, blobUrl = '';
+    let dpr = 1;
+    const place = { x: 0, y: 0, s: 1, a: 0 };   // slab center, height in px, angle
+
+    // Paint the slab once onto an offscreen canvas (flat front) so the capture is WYSIWYG
+    const sprite = document.createElement('canvas');
+    const SW = 660, SH = 1080;
+    sprite.width = SW; sprite.height = SH;
+    const img = new Image();
+    img.src = 'assets/ijazah.jpg';
+    let spriteReady = false;
+
+    function rr(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+
+    function paintSprite() {
+      const c = sprite.getContext('2d');
+      c.clearRect(0, 0, SW, SH);
+
+      // acrylic body
+      rr(c, 2, 2, SW - 4, SH - 4, 46);
+      const body = c.createLinearGradient(0, 0, SW, SH);
+      body.addColorStop(0, 'rgba(236,243,250,.55)');
+      body.addColorStop(.4, 'rgba(190,205,220,.30)');
+      body.addColorStop(1, 'rgba(236,243,250,.50)');
+      c.fillStyle = body; c.fill();
+      c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.85)'; c.stroke();
+      rr(c, 14, 14, SW - 28, SH - 28, 36); c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,.35)'; c.stroke();
+      rr(c, 22, 22, SW - 44, SH - 44, 30); c.strokeStyle = 'rgba(0,0,0,.18)'; c.stroke();
+
+      // label
+      const lx = 40, ly = 58, lw = SW - 80, lh = 196;
+      c.fillStyle = '#fff'; c.fillRect(lx, ly, lw, lh);
+      c.lineWidth = 6; c.strokeStyle = '#d8262f'; c.strokeRect(lx + 3, ly + 3, lw - 6, lh - 6);
+      c.fillStyle = '#1d1d1f';
+      c.font = '25px Arial, Helvetica, sans-serif'; c.textBaseline = 'alphabetic';
+      c.textAlign = 'left';
+      ['1985 IJAZAH ASLI', 'JOKO WIDODO', '1ST EDITION'].forEach((s, i) => c.fillText(s, lx + 28, ly + 50 + i * 31));
+      c.textAlign = 'right';
+      c.fillText('#1', lx + lw - 28, ly + 50);
+      c.font = '28px Arial, Helvetica, sans-serif';
+      c.fillText('UGM', lx + lw - 28, ly + 82);
+      c.font = '24px Arial, Helvetica, sans-serif';
+      c.fillText(CERT, lx + lw - 28, ly + lh - 26);
+      const { bars, width } = barcodeBars(200), bw = 330, scale = bw / width;
+      c.fillStyle = '#111';
+      bars.forEach(([x, w]) => c.fillRect(lx + 28 + x * scale, ly + lh - 58, w * scale, 30));
+
+      // well
+      const wx = 40, wy = ly + lh + 30, ww = SW - 80, wh = SH - wy - 58;
+      rr(c, wx, wy, ww, wh, 16);
+      c.fillStyle = 'rgba(255,255,255,.07)'; c.fill();
+      c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,.6)'; c.stroke();
+      [wy + 24, wy + wh - 24].forEach(y => {
+        const g = c.createLinearGradient(wx + 60, 0, wx + ww - 60, 0);
+        g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,255,255,.6)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+        c.fillStyle = g; c.fillRect(wx + 60, y - 2, ww - 120, 4);
+      });
+
+      // card: landscape photo turned 90deg clockwise
+      const ch = wh - wh * 0.14, cw = ch * 2 / 3;
+      const cx = wx + ww / 2, cy = wy + wh / 2;
+      c.save();
+      c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 14; c.shadowOffsetY = 4;
+      c.fillStyle = '#e9e2cf'; c.fillRect(cx - cw / 2, cy - ch / 2, cw, ch);
+      c.restore();
+      c.save();
+      c.beginPath(); c.rect(cx - cw / 2, cy - ch / 2, cw, ch); c.clip();
+      c.translate(cx, cy); c.rotate(Math.PI / 2);
+      c.drawImage(img, -ch / 2, -cw / 2, ch, cw);
+      c.restore();
+
+      // diagonal acrylic glare
+      c.save();
+      rr(c, 2, 2, SW - 4, SH - 4, 46); c.clip();
+      const gl = c.createLinearGradient(0, 0, SW, SH);
+      gl.addColorStop(.30, 'rgba(255,255,255,0)');
+      gl.addColorStop(.42, 'rgba(255,255,255,.20)');
+      gl.addColorStop(.50, 'rgba(255,255,255,0)');
+      c.fillStyle = gl; c.fillRect(0, 0, SW, SH);
+      c.restore();
+      spriteReady = true;
+    }
+    img.onload = paintSprite;
+    if (img.complete && img.naturalWidth) paintSprite();
+
+    function size() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        const first = !canvas.width || !place.s || place.s === 1;
+        canvas.width = w; canvas.height = h;
+        if (first) { place.x = w / 2; place.y = h * 0.52; place.s = h * 0.46; place.a = -0.06; }
+      }
+    }
+
+    function draw(withMark) {
+      const W = canvas.width, H = canvas.height;
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+      const vw = video.videoWidth, vh = video.videoHeight;
+      if (vw && vh) {
+        const s = Math.max(W / vw, H / vh), dw = vw * s, dh = vh * s;
+        ctx.save();
+        if (facing === 'user') { ctx.translate(W, 0); ctx.scale(-1, 1); }  // mirror selfie view only
+        ctx.drawImage(video, (W - dw) / 2, (H - dh) / 2, dw, dh);
+        ctx.restore();
+      }
+      if (spriteReady) {
+        const h = place.s, w = h * SW / SH;
+        ctx.save();
+        ctx.translate(place.x, place.y); ctx.rotate(place.a);
+        ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 30 * dpr; ctx.shadowOffsetY = 14 * dpr;
+        ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
+        ctx.restore();
+      }
+      if (withMark) {
+        const fs = Math.round(12 * dpr);
+        ctx.font = `500 ${fs}px "JetBrains Mono", monospace`;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        ctx.fillStyle = 'rgba(0,0,0,.45)';
+        const label = `VAULT 01 · CERT ${CERT}`;
+        const tw = ctx.measureText(label).width;
+        ctx.fillRect(14 * dpr, H - 14 * dpr - fs * 2, tw + 20 * dpr, fs * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(label, 24 * dpr, H - 14 * dpr - fs * .5);
+      }
+    }
+
+    function loop() { size(); draw(false); raf = requestAnimationFrame(loop); }
+
+    async function start() {
+      stopStream();
+      msg.classList.remove('on');
+      if (!navigator.mediaDevices?.getUserMedia) {
+        msg.textContent = 'This browser cannot open the camera. Try Safari or Chrome on your phone.';
+        msg.classList.add('on'); return;
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false
+        });
+        video.srcObject = stream;
+        await video.play();
+      } catch (err) {
+        msg.textContent = 'Camera access was blocked. Allow camera permission for this site and try again.';
+        msg.classList.add('on');
+      }
+    }
+    function stopStream() {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      stream = null; video.srcObject = null;
+    }
+
+    function open() {
+      cam.classList.add('on');
+      document.documentElement.style.overflow = 'hidden';
+      size(); start();
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+    }
+    function close() {
+      cam.classList.remove('on');
+      shot.classList.remove('on');
+      document.documentElement.style.overflow = '';
+      cancelAnimationFrame(raf); stopStream();
+    }
+
+    // Gestures: one finger moves, two fingers pinch-scale and rotate
+    const ptrs = new Map();
+    let prev = null;
+    const pair = () => {
+      const [a, b] = [...ptrs.values()];
+      return { d: Math.hypot(b.x - a.x, b.y - a.y), ang: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    };
+    canvas.addEventListener('pointerdown', e => {
+      canvas.setPointerCapture(e.pointerId);
+      ptrs.set(e.pointerId, { x: e.clientX * dpr, y: e.clientY * dpr });
+      prev = ptrs.size === 2 ? pair() : null;
+      tip.style.opacity = '0';
+    });
+    canvas.addEventListener('pointermove', e => {
+      const p = ptrs.get(e.pointerId); if (!p) return;
+      const nx = e.clientX * dpr, ny = e.clientY * dpr;
+      if (ptrs.size === 1) { place.x += nx - p.x; place.y += ny - p.y; }
+      p.x = nx; p.y = ny;
+      if (ptrs.size === 2) {
+        const now = pair();
+        if (prev) {
+          place.s = Math.min(Math.max(place.s * now.d / prev.d, 80 * dpr), canvas.height * 1.4);
+          place.a += now.ang - prev.ang;
+          place.x += now.mx - prev.mx; place.y += now.my - prev.my;
+        }
+        prev = now;
       }
     });
-    const release = e => {
-      if (e.pointerType === 'mouse' && e.type === 'pointerup') { active = false; stage.classList.remove('dragging'); return; }
-      active = false;
-      stage.classList.remove('dragging');
-      tgt = { rx: 0, ry: 0, mx: 50, my: 50, g: 0 };
-      kick();
-    };
-    stage.addEventListener('pointerup', release);
-    stage.addEventListener('pointercancel', release);
-    stage.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !active) release(e); });
+    const lift = e => { ptrs.delete(e.pointerId); prev = ptrs.size === 2 ? pair() : null; };
+    canvas.addEventListener('pointerup', lift);
+    canvas.addEventListener('pointercancel', lift);
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      if (e.shiftKey) place.a += e.deltaY * 0.003;
+      else place.s = Math.min(Math.max(place.s * (1 - e.deltaY * 0.0015), 80 * dpr), canvas.height * 1.4);
+    }, { passive: false });
 
-    if (!reduce) scheduleIdle(); else slab.classList.remove('idle');
+    document.getElementById('openCam').addEventListener('click', open);
+    document.getElementById('closeCam').addEventListener('click', close);
+    document.getElementById('flipCam').addEventListener('click', () => { facing = facing === 'user' ? 'environment' : 'user'; start(); });
+
+    document.getElementById('shutter').addEventListener('click', () => {
+      draw(true);
+      flash.classList.add('go'); requestAnimationFrame(() => requestAnimationFrame(() => flash.classList.remove('go')));
+      canvas.toBlob(b => {
+        blob = b;
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+        blobUrl = URL.createObjectURL(b);
+        shotImg.src = blobUrl;
+        shot.classList.add('on');
+      }, 'image/jpeg', 0.92);
+    });
+    document.getElementById('retake').addEventListener('click', () => shot.classList.remove('on'));
+    document.getElementById('saveShot').addEventListener('click', async () => {
+      if (!blob) return;
+      const file = new File([blob], `ijazah-vault-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: 'Ijazah Vault' }); return; } catch (err) { if (err.name === 'AbortError') return; }
+      }
+      const a = document.createElement('a');
+      a.href = blobUrl; a.download = file.name;
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+    addEventListener('keydown', e => { if (e.key === 'Escape' && cam.classList.contains('on')) close(); });
   })();
 </script>
 </body>
